@@ -1,0 +1,40 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local settings and secrets
+.env
+.env.*
+*.local
+
+# Data artifacts (do not commit raw/processed datasets)
+data/raw/
+data/processed/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Training/evaluation artifacts
+outputs/
+
+# Optional: keep folder structure placeholders if needed
+# !outputs/.gitkeep
+
+# Logs and reports generated during runs
+*.log
+
+# Jupyter / editor artifacts
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

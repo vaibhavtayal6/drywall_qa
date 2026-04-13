@@ -1,0 +1,141 @@
+# ============================================================
+# Drywall QA — Prompted Segmentation Config
+# All hyperparameters live here. Never hardcode in .py files.
+# ============================================================
+
+# ----- Reproducibility -----
+seed: 42          # fixed across random / numpy / torch / cuda
+
+# ----- Paths -----
+paths:
+  data_root: "data/processed"
+  raw_root: "data/raw"
+  checkpoint_dir: "outputs/checkpoints"
+  prediction_dir: "outputs/predictions"
+  log_dir: "outputs/logs"
+  report_dir: "outputs/report"
+
+# ----- Dataset -----
+dataset:
+  image_size: 352           # CLIPSeg native resolution (352x352)
+  mask_size:  352
+  train_split: 0.70
+  val_split:   0.15
+  test_split:  0.15
+
+  # Augmentation — applied only on train
+  augmentation:
+    horizontal_flip:  true
+    vertical_flip:    false
+    rotation_limit:   15        # degrees
+    brightness_limit: 0.2
+    contrast_limit:   0.2
+    blur_limit:       3
+    elastic_alpha:    60        # for crack shape variation
+    elastic_sigma:    6
+
+  # Class imbalance weights (foreground vs background)
+  # Cracks: ~2% foreground → weight 30x
+  # Taping: ~10% foreground → weight 8x
+  foreground_weights:
+    crack:  30.0
+    taping: 8.0
+
+# ----- Prompt bank -----
+# During training one prompt is sampled randomly per image.
+# During inference logits from all prompts are averaged (ensembling).
+prompts:
+  taping:
+    - "segment taping area"
+    - "segment joint tape"
+    - "segment drywall seam"
+    - "segment mudded joint"
+    - "segment butt joint"
+    - "find wall joint"
+  crack:
+    - "segment crack"
+    - "segment wall crack"
+    - "detect surface crack"
+    - "find structural crack"
+    - "segment hairline crack"
+    - "detect wall damage"
+
+# ----- Model -----
+model:
+  backbone: "CIDAS/clipseg-rd64-refined"  # HuggingFace model id
+  # rd64 = reduced decoder 64 channels (faster, good for small datasets)
+  # alternatives: "CIDAS/clipseg-rd16-refined" (even lighter)
+  freeze_backbone: true     # Phase 1: only train decoder
+  unfreeze_top_n_layers: 4  # Phase 2: unfreeze top N transformer blocks
+
+# ----- Training -----
+training:
+  # Phase 1: train decoder only
+  phase1:
+    epochs: 15
+    lr: 1.0e-4
+    weight_decay: 1.0e-4
+
+  # Phase 2: fine-tune with partial unfreeze
+  phase2:
+    epochs: 15
+    lr: 5.0e-5          # lower LR to avoid catastrophic forgetting
+    weight_decay: 1.0e-4
+
+  batch_size: 8
+  num_workers: 2
+  pin_memory: true
+
+  # Loss function
+  loss:
+    dice_weight: 0.6
+    bce_weight:  0.4
+    pos_weight: 10.0
+    # Combined: L = 0.6*Dice + 0.4*WeightedBCE    
+
+  # Scheduler: cosine annealing with warm restarts
+  scheduler:
+    type: "cosine"
+    T_max: 15
+    eta_min: 1.0e-6
+
+  # Early stopping
+  early_stopping:
+    patience: 7
+    monitor: "val_dice"
+    mode: "max"
+
+  # Gradient clipping (prevents exploding gradients with small datasets)
+  grad_clip: 1.0
+
+# ----- Postprocessing (tuned on val set) -----
+postprocessing:
+  crack:
+    threshold: 0.35         # lower = catch thin structures
+    min_component_area: 50  # px² — remove salt noise
+    morph_close_kernel: 3   # close small gaps in crack lines
+    morph_dilate_kernel: 0  # no dilation for cracks (preserve thin)
+
+  taping:
+    threshold: 0.50
+    min_component_area: 200
+    morph_close_kernel: 5
+    morph_dilate_kernel: 2  # slight dilation to smooth tape edges
+
+# ----- Inference -----
+inference:
+  use_prompt_ensemble: true   # average logits over all prompts
+  use_sam_refinement: false   # set true if SAM checkpoint available
+  sam_model: "facebook/sam-vit-base"
+  output_format: "png"        # single-channel, values {0, 255}
+
+# ----- Evaluation -----
+evaluation:
+  metrics:
+    - miou
+    - dice
+    - precision
+    - recall
+    - boundary_iou
+    - cldice         # topology metric for thin structures (cracks)
+  iou_threshold: 0.5
