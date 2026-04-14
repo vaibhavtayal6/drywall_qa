@@ -1,36 +1,3 @@
-"""
-src/data/dataset.py
--------------------
-PyTorch Dataset for prompted drywall segmentation.
-
-WHY THIS DESIGN:
-- One unified Dataset handles both crack and taping classes.
-  The class label is implicit in the prompt. This means the same
-  model + same training loop handles both tasks simultaneously.
-
-- Augmentations live inside the Dataset (via Albumentations).
-  Industry standard: Albumentations is ~3x faster than torchvision
-  transforms for segmentation tasks because it transforms image AND
-  mask jointly with identical random parameters. Without joint
-  transforms, your mask ends up misaligned with the flipped image.
-
-- The Dataset is designed to be split into train/val/test externally.
-  Never split inside the Dataset class — it makes testing harder.
-
-DATA FORMAT EXPECTED (Roboflow export, "Semantic Segmentation" format):
-  data/raw/dataset1/
-    images/
-      img_001.jpg
-      img_002.jpg
-    masks/                  ← PNG files, pixel values {0, 255} or {0, 1}
-      img_001.png
-      img_002.png
-
-AUGMENTATION STRATEGY:
-  Train: random flip + rotation + brightness + elastic (for cracks)
-  Val/Test: only resize + normalize (no randomness)
-  Rationale: val/test must be deterministic to compare across runs.
-"""
 
 import random
 from pathlib import Path

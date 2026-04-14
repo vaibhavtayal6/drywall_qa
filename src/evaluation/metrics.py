@@ -1,47 +1,3 @@
-"""
-src/evaluation/metrics.py
---------------------------
-Segmentation evaluation metrics for drywall QA.
-
-METRICS EXPLAINED:
-
-mIoU (mean Intersection over Union):
-    IoU = TP / (TP + FP + FN) per class, then averaged.
-    The most common segmentation metric. Ranges [0, 1].
-    Weakness: penalises boundaries heavily. A prediction that
-    covers the right area but is slightly off-boundary looks
-    terrible in IoU but fine visually.
-
-Dice / F1:
-    Dice = 2*TP / (2*TP + FP + FN)
-    Mathematically equivalent to F1 score.
-    More generous than IoU: Dice(P, G) = 2*IoU/(1+IoU).
-    Industry standard for medical/industrial segmentation.
-
-Boundary IoU:
-    Only considers pixels within D pixels of the boundary.
-    (D = 2% of image diagonal, following the original paper)
-    Better correlates with perceived mask quality.
-    A mask with correct interior but fuzzy edges scores high
-    on mIoU but low on Boundary IoU.
-
-clDice (Centreline Dice):
-    Specifically designed for tubular/linear structures like cracks.
-    clDice = 2 * |S(P) ∩ G| * |S(G) ∩ P| / (|S(P)| + |S(G)|)
-    Where S() is the skeletonisation (centreline extraction).
-    Rewards topological correctness: detecting the full length
-    of a crack matters, even if the width is wrong.
-    Reference: Shit et al. (2021), "clDice - a Novel Topology-Preserving
-    Loss Function for Tubular Structure Segmentation", CVPR 2021.
-
-Precision / Recall:
-    Precision = TP / (TP + FP) — of all predicted foreground, how
-    many are actually foreground?
-    Recall = TP / (TP + FN) — of all actual foreground, how many
-    did we find?
-    Important to report both: a model that predicts everything as
-    foreground has Recall=1.0 but Precision≈0.
-"""
 
 import numpy as np
 import cv2
@@ -51,21 +7,8 @@ from scipy import ndimage
 EPS = 1e-6  # numerical stability constant
 
 
-# ──────────────────────────────────────────────────────────────
-# Core pixel-level metrics
-# ──────────────────────────────────────────────────────────────
-
 def compute_iou(pred: np.ndarray, gt: np.ndarray) -> float:
-    """
-    Intersection over Union for binary masks.
 
-    Args:
-        pred: [H, W] binary array {0, 1} — predicted mask
-        gt:   [H, W] binary array {0, 1} — ground truth mask
-
-    Returns:
-        IoU scalar in [0, 1]
-    """
     pred_b = pred.astype(bool)
     gt_b = gt.astype(bool)
     intersection = (pred_b & gt_b).sum()
@@ -74,12 +17,7 @@ def compute_iou(pred: np.ndarray, gt: np.ndarray) -> float:
 
 
 def compute_dice(pred: np.ndarray, gt: np.ndarray) -> float:
-    """
-    Dice coefficient (F1 score) for binary masks.
 
-    Returns:
-        Dice scalar in [0, 1]
-    """
     pred_b = pred.astype(bool)
     gt_b = gt.astype(bool)
     intersection = (pred_b & gt_b).sum()
@@ -89,12 +27,7 @@ def compute_dice(pred: np.ndarray, gt: np.ndarray) -> float:
 def compute_precision_recall(
     pred: np.ndarray, gt: np.ndarray
 ) -> Tuple[float, float]:
-    """
-    Precision and Recall for binary masks.
 
-    Returns:
-        (precision, recall) scalars in [0, 1]
-    """
     pred_b = pred.astype(bool)
     gt_b = gt.astype(bool)
     tp = (pred_b & gt_b).sum()
@@ -105,19 +38,8 @@ def compute_precision_recall(
     return precision, recall
 
 
-# ──────────────────────────────────────────────────────────────
-# Boundary IoU
-# ──────────────────────────────────────────────────────────────
-
 def _get_boundary(mask: np.ndarray, dilation_ratio: float = 0.02) -> np.ndarray:
-    """
-    Extract boundary pixels within D pixels of the mask edge.
 
-    D = max(1, round(dilation_ratio * image_diagonal))
-    At 352×352: diagonal ≈ 498, D ≈ 10 pixels.
-
-    Uses erosion: boundary = mask XOR eroded_mask.
-    """
     h, w = mask.shape
     diag = np.sqrt(h**2 + w**2)
     d = max(1, int(round(dilation_ratio * diag)))
@@ -132,16 +54,7 @@ def compute_boundary_iou(
     gt: np.ndarray,
     dilation_ratio: float = 0.02,
 ) -> float:
-    """
-    Boundary IoU — IoU computed only on boundary pixels.
 
-    Better measure of mask quality at edges.
-    Reference: Cheng et al. (2021), "Boundary IoU: Improving Object-Centric
-    Image Segmentation Evaluation", CVPR 2021.
-
-    Returns:
-        Boundary IoU in [0, 1]
-    """
     pred_b = pred.astype(bool)
     gt_b = gt.astype(bool)
 
@@ -160,21 +73,8 @@ def compute_boundary_iou(
     union = ((pred_b | gt_b) & boundary_union).sum()
     return float(intersection) / (float(union) + EPS)
 
-
-# ──────────────────────────────────────────────────────────────
-# clDice — topology metric for thin structures
-# ──────────────────────────────────────────────────────────────
-
 def _skeletonise(mask: np.ndarray) -> np.ndarray:
-    """
-    Extract skeleton (centreline) of a binary mask.
 
-    Uses Zhang-Suen thinning via OpenCV's ximgproc thinning,
-    with fallback to scipy's distance-transform based approach.
-
-    Returns:
-        Binary skeleton array, same shape as input
-    """
     # Try OpenCV ximgproc first (faster)
     try:
         import cv2.ximgproc
@@ -186,8 +86,6 @@ def _skeletonise(mask: np.ndarray) -> np.ndarray:
     except (AttributeError, ImportError):
         pass
 
-    # Fallback: morphological skeleton via scipy
-    # Repeatedly erode and record the difference
     skeleton = np.zeros_like(mask, dtype=np.uint8)
     element = ndimage.generate_binary_structure(2, 2)
     temp = mask.astype(bool).copy()
@@ -204,20 +102,7 @@ def _skeletonise(mask: np.ndarray) -> np.ndarray:
 
 
 def compute_cldice(pred: np.ndarray, gt: np.ndarray) -> float:
-    """
-    Centreline Dice (clDice) for topology-preserving evaluation.
 
-    Especially important for cracks: a prediction that follows the
-    crack's centreline but is thicker or thinner than GT scores
-    much better in clDice than in standard IoU.
-
-    clDice = 2 * Tprec * Tsens / (Tprec + Tsens)
-    Tprec = |S_pred ∩ GT| / |S_pred|  (skeleton of pred covered by GT)
-    Tsens = |S_gt ∩ Pred| / |S_gt|    (skeleton of GT covered by pred)
-
-    Returns:
-        clDice in [0, 1]
-    """
     pred_b = pred.astype(bool).astype(np.uint8)
     gt_b = gt.astype(bool).astype(np.uint8)
 
@@ -241,28 +126,13 @@ def compute_cldice(pred: np.ndarray, gt: np.ndarray) -> float:
     return float(cldice)
 
 
-# ──────────────────────────────────────────────────────────────
-# Full metric suite
-# ──────────────────────────────────────────────────────────────
-
 def compute_all_metrics(
     pred: np.ndarray,
     gt: np.ndarray,
     class_name: str = "unknown",
     compute_cldice_flag: bool = True,
 ) -> Dict[str, float]:
-    """
-    Compute all segmentation metrics for one (pred, gt) pair.
 
-    Args:
-        pred:               [H, W] predicted mask, values {0,255} or {0,1}
-        gt:                 [H, W] ground truth mask, values {0,255} or {0,1}
-        class_name:         "crack" or "taping" (used for logging)
-        compute_cldice_flag: clDice is slow — set False for quick val loop
-
-    Returns:
-        Dict with keys: iou, dice, precision, recall, boundary_iou, cldice
-    """
     # Normalise to {0, 1}
     pred_bin = (pred > 0).astype(np.uint8)
     gt_bin = (gt > 0).astype(np.uint8)
@@ -285,15 +155,7 @@ def compute_all_metrics(
 
 
 def aggregate_metrics(metric_list: list) -> Dict[str, float]:
-    """
-    Average a list of per-image metric dicts into dataset-level numbers.
 
-    Args:
-        metric_list: List of dicts from compute_all_metrics()
-
-    Returns:
-        Dict with mean of each numeric metric
-    """
     if not metric_list:
         return {}
 

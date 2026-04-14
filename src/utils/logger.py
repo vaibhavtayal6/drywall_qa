@@ -1,15 +1,3 @@
-"""
-src/utils/logger.py
---------------------
-Consistent logging across all scripts.
-
-Industry practice:
-- Use Python's built-in logging (not print) — allows log levels,
-  file sinks, timestamps, and grep-ability.
-- One logger per module: logger = get_logger(__name__)
-- Log to both console (INFO) and a rotating file (DEBUG) so you can
-  replay exactly what happened during a training run days later.
-"""
 
 import logging
 import sys
@@ -18,23 +6,7 @@ from datetime import datetime
 
 
 def get_logger(name: str, log_dir: str = None, level: int = logging.INFO) -> logging.Logger:
-    """
-    Get a logger that writes to console and optionally to a file.
 
-    Args:
-        name:    Module name, typically __name__
-        log_dir: If provided, also write to log_dir/YYYYMMDD_HHMMSS.log
-        level:   Logging level (INFO by default)
-
-    Returns:
-        Configured Logger instance
-
-    Usage:
-        logger = get_logger(__name__, log_dir="outputs/logs")
-        logger.info("Training started")
-        logger.warning("Low GPU memory")
-        logger.error("Checkpoint not found")
-    """
     logger = logging.getLogger(name)
 
     # Avoid adding duplicate handlers if called multiple times

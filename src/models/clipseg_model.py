@@ -1,12 +1,4 @@
 """
-src/models/clipseg_model.py
-----------------------------
-CLIPSeg model wrapper for drywall segmentation.
-
-HOW CLIPSEG WORKS (architecture basis):
-────────────────────────────────────────
-CLIPSeg = CLIP backbone + lightweight transformer decoder.
-
 1. CLIP image encoder (ViT-B/16):
    - Divides image into 16×16 patches → sequence of patch tokens
    - Each patch gets a learned position embedding

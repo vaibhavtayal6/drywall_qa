@@ -1,19 +1,4 @@
-"""
-scripts/evaluate.py
---------------------
-Run inference on the test set and compute all evaluation metrics.
 
-Usage:
-    python scripts/evaluate.py \
-        --config configs/config.yaml \
-        --checkpoint outputs/checkpoints/best_phase2 \
-        --split test
-
-Outputs:
-    outputs/predictions/   — PNG masks (named {id}__{prompt}.png)
-    outputs/logs/metrics_test.json — Full metrics table
-    Console: metrics summary table
-"""
 
 import argparse
 import json

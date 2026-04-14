@@ -1,13 +1,4 @@
 """
-scripts/train.py
------------------
-Entry point for training DrywallCLIPSeg.
-
-Usage:
-    python scripts/train.py --config configs/config.yaml
-    python scripts/train.py --config configs/config.yaml --phase 1
-    python scripts/train.py --config configs/config.yaml --device cpu
-
 This script:
 1. Fixes all random seeds
 2. Loads config
@@ -120,15 +111,11 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # ── Load config ────────────────────────────────────────────
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
 
-    # ── Seed everything ────────────────────────────────────────
-    # MUST be called before any torch/numpy/random usage
     set_seed(cfg["seed"])
 
-    # ── Device ────────────────────────────────────────────────
     if args.device:
         device = args.device
     else:
@@ -180,13 +167,13 @@ def main():
         split="val",
     )
 
-    # ── Model ──────────────────────────────────────────────────
+
     model = DrywallCLIPSeg(
         model_name=cfg["model"]["backbone"],
         freeze_backbone=cfg["model"]["freeze_backbone"],
     )
 
-    # ── DataLoaders ────────────────────────────────────────────
+
     collate_fn = make_collate_fn(model.processor, device=device)
     t_cfg = cfg["training"]
 
@@ -217,7 +204,6 @@ def main():
 
     logger.info(f"Train batches: {len(train_loader)}, Val batches: {len(val_loader)}")
 
-    # ── Train ──────────────────────────────────────────────────
     trainer = Trainer(
         cfg=cfg,
         model=model,

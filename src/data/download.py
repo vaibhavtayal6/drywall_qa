@@ -1,34 +1,3 @@
-"""
-src/data/download.py
----------------------
-Download both Roboflow datasets programmatically.
-
-ROBOFLOW EXPORT FORMAT:
-We use "Semantic Segmentation" format (mask PNG per image).
-Each dataset downloads as:
-    dataset_name/
-        train/  ← or valid/ and test/ depending on Roboflow split
-            images/
-            masks/ (or _annotations.coco.json for COCO format)
-
-We normalise both datasets into our project's expected structure:
-    data/raw/dataset1/
-        images/
-        masks/
-    data/raw/dataset2/
-        images/
-        masks/
-
-SETUP REQUIRED:
-    pip install roboflow
-    Set ROBOFLOW_API_KEY environment variable, or pass api_key argument.
-    Get your key from: https://app.roboflow.com/settings/api
-
-NOTE ON ROBOFLOW EXPORT FORMATS:
-- "png mask" format: one PNG per image, pixel values = class ID
-- For binary segmentation (one class), pixel values are {0, 255}
-- We verify this after download and warn if unexpected values found
-"""
 
 import json
 import numpy as np
@@ -41,14 +10,7 @@ logger = get_logger(__name__)
 
 
 def download_dataset1(api_key: str, output_dir: str = "data/raw/dataset1") -> None:
-    """
-    Download Dataset 1: Drywall-Join-Detect (taping areas).
-    https://universe.roboflow.com/objectdetect-pu6rn/drywall-join-detect
-
-    Args:
-        api_key:    Roboflow API key
-        output_dir: Where to save the normalised dataset
-    """
+  
     try:
         from roboflow import Roboflow
     except ImportError:
@@ -71,14 +33,7 @@ def download_dataset1(api_key: str, output_dir: str = "data/raw/dataset1") -> No
 
 
 def download_dataset2(api_key: str, output_dir: str = "data/raw/dataset2") -> None:
-    """
-    Download Dataset 2: Cracks-3ii36.
-    https://universe.roboflow.com/fyp-ny1jt/cracks-3ii36
-
-    Args:
-        api_key:    Roboflow API key
-        output_dir: Where to save the normalised dataset
-    """
+   
     try:
         from roboflow import Roboflow
     except ImportError:
@@ -97,10 +52,7 @@ def download_dataset2(api_key: str, output_dir: str = "data/raw/dataset2") -> No
 
 
 def _normalise_roboflow_structure(src_dir: str, dst_dir: str, class_name: str) -> None:
-    """
-    Convert COCO JSON annotations → binary mask PNGs.
-    Saves them to dst_dir/masks/ so dataset.py works unchanged.
-    """
+   
     dst = Path(dst_dir)
     images_out = dst / "images"
     masks_out  = dst / "masks"
@@ -169,15 +121,6 @@ def _normalise_roboflow_structure(src_dir: str, dst_dir: str, class_name: str) -
 
 
 def _verify_masks(masks_dir: str, class_name: str, sample_n: int = 10) -> None:
-    """
-    Sanity check: verify masks are binary {0, 255} or {0, 1}.
-    Logs a warning if unexpected values found.
-
-    In Roboflow semantic segmentation exports, multi-class datasets
-    use pixel values = class index. For single-class datasets the
-    values should be {0, 255}. If values are {0, 1}, our Dataset
-    class handles that by treating any non-zero pixel as foreground.
-    """
     import numpy as np
     import cv2
 
@@ -205,12 +148,6 @@ def _verify_masks(masks_dir: str, class_name: str, sample_n: int = 10) -> None:
 
 
 def dataset_stats(data_dir: str, class_name: str) -> dict:
-    """
-    Compute basic dataset statistics for the report.
-
-    Returns dict with:
-        n_images, n_masks, mean_foreground_ratio, image_sizes
-    """
     import numpy as np
     import cv2
 

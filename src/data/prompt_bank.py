@@ -1,28 +1,4 @@
-"""
-src/data/prompt_bank.py
------------------------
-Prompt bank for text-conditioned segmentation.
 
-CORE IDEA:
-CLIPSeg conditions its decoder on a CLIP text embedding of the prompt.
-CLIP encodes "segment crack" and "find wall damage" as different vectors
-in embedding space — even though they describe the same task.
-
-If you train with only "segment crack", the model learns to respond to
-THAT specific vector. At test time, any synonym degrades performance.
-
-The fix: during training, randomly sample one prompt from a bank of
-semantically equivalent phrasings. This forces the model to respond
-to a *region* of embedding space (the semantic concept "crack") rather
-than a single point (one specific sentence).
-
-At inference we go further: run ALL prompts, average the logit maps,
-then threshold once. This is "prompt ensembling" and it's the single
-highest-value post-training improvement for CLIPSeg.
-
-Industry analogy: test-time augmentation (TTA) — same idea but for
-the text modality instead of the image modality.
-"""
 
 import random
 from typing import List, Optional

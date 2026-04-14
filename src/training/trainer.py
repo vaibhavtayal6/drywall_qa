@@ -1,35 +1,4 @@
-"""
-src/training/trainer.py
-------------------------
-Training loop for DrywallCLIPSeg.
 
-TRAINING STRATEGY — 2 PHASES:
-────────────────────────────────
-Phase 1 (decoder only, ~15 epochs):
-  - CLIP backbone is fully frozen
-  - Only the CLIPSeg decoder is trained
-  - High learning rate (1e-4) since decoder starts near-random
-  - Goal: teach the decoder to produce masks conditioned on text
-  - Checkpoint: save best val_dice after phase 1
-
-Phase 2 (partial unfreeze, ~15 epochs):
-  - Unfreeze top 4 CLIP vision transformer blocks
-  - Differential LR: decoder=5e-5, encoder=5e-6 (10x lower)
-  - Goal: adapt CLIP's high-level features to construction domain
-  - Load phase 1 best checkpoint before starting phase 2
-
-WHY TWO PHASES VS END-TO-END TRAINING:
-End-to-end from the start often degrades the CLIP encoder because
-the randomly-initialised decoder produces large gradients that
-"corrupt" the pre-trained visual features. Training the decoder
-first stabilises it, so phase 2 gradient signals are meaningful.
-
-PROMPT COLLATION:
-CLIPSeg requires text to be tokenised. In a standard PyTorch DataLoader,
-batches are collated by stacking tensors. But text prompts are strings —
-they need to be tokenised AFTER batching (so we can batch-tokenise).
-The collate_fn handles this.
-"""
 
 import time
 from pathlib import Path
@@ -47,42 +16,16 @@ from src.utils.logger import get_logger, MetricLogger
 logger = get_logger(__name__)
 
 
-# ──────────────────────────────────────────────────────────────
-# Custom collate function
-# ──────────────────────────────────────────────────────────────
-
 def make_collate_fn(processor, device: str = "cpu"):
-    """
-    Returns a DataLoader collate function that:
-    1. Stacks image tensors and mask tensors into batches
-    2. Tokenises the list of prompt strings using CLIPSegProcessor
-    3. Returns everything as a dict ready for the model forward pass
 
-    Why a closure (factory function)?
-    The collate_fn needs access to `processor` and `device`.
-    A closure captures these from the outer scope cleanly without
-    making them global variables.
-
-    Args:
-        processor: CLIPSegProcessor (handles tokenisation + normalisation)
-        device:    Device to move tensors to ("cuda" or "cpu")
-
-    Returns:
-        collate_fn callable
-    """
     def collate_fn(batch):
-        # batch is a list of (image, mask, prompt, image_id) tuples
+   
         images, masks, prompts, image_ids = zip(*batch)
 
-        # Stack image and mask tensors
-        # Keep tensors on CPU here. DataLoader workers must not touch CUDA.
+    
         images = torch.stack(images)   # [B, 3, H, W]
         masks = torch.stack(masks)     # [B, 1, H, W]
 
-        # Tokenise all prompts in one batch call
-        # padding=True: pads shorter sequences to match the longest
-        # truncation=True: cuts at max_length if too long
-        # return_tensors="pt": returns PyTorch tensors
         text_inputs = processor(
             text=list(prompts),
             padding=True,
@@ -103,21 +46,8 @@ def make_collate_fn(processor, device: str = "cpu"):
 
     return collate_fn
 
-
-# ──────────────────────────────────────────────────────────────
-# Early stopping
-# ──────────────────────────────────────────────────────────────
-
 class EarlyStopping:
-    """
-    Stop training when a monitored metric stops improving.
 
-    Args:
-        patience: Number of epochs to wait before stopping
-        mode:     "max" for metrics like Dice (higher = better)
-                  "min" for losses (lower = better)
-        min_delta: Minimum change to count as improvement
-    """
 
     def __init__(self, patience: int = 7, mode: str = "max", min_delta: float = 1e-4):
         self.patience = patience
@@ -146,26 +76,9 @@ class EarlyStopping:
         return self.should_stop
 
 
-# ──────────────────────────────────────────────────────────────
-# Main Trainer
-# ──────────────────────────────────────────────────────────────
 
 class Trainer:
-    """
-    Manages the full training process including both phases.
 
-    Usage:
-        trainer = Trainer(cfg, model, train_loader, val_loader)
-        trainer.train_phase1()
-        trainer.train_phase2()
-
-    Args:
-        cfg:          Full config dict (loaded from config.yaml)
-        model:        DrywallCLIPSeg instance
-        train_loader: DataLoader for training data
-        val_loader:   DataLoader for validation data
-        device:       "cuda" or "cpu"
-    """
 
     def __init__(
         self,
@@ -203,9 +116,6 @@ class Trainer:
         )
         logger.info(f"Loss: {self.loss_fn}")
 
-    # ──────────────────────────────────────────────────────────
-    # Phase 1: decoder only
-    # ──────────────────────────────────────────────────────────
 
     def train_phase1(self) -> str:
         """
@@ -241,9 +151,6 @@ class Trainer:
         )
         return best_path
 
-    # ──────────────────────────────────────────────────────────
-    # Phase 2: partial unfreeze
-    # ──────────────────────────────────────────────────────────
 
     def train_phase2(self, phase1_checkpoint: Optional[str] = None) -> str:
         """
@@ -294,10 +201,6 @@ class Trainer:
         )
         return best_path
 
-    # ──────────────────────────────────────────────────────────
-    # Core epoch loop
-    # ──────────────────────────────────────────────────────────
-
     def _run_epochs(
         self,
         optimizer,
@@ -313,13 +216,9 @@ class Trainer:
         for epoch in range(1, n_epochs + 1):
             epoch_start = time.time()
 
-            # ── Train ──────────────────────────────────────────
             train_loss = self._train_one_epoch(optimizer)
 
-            # ── Validate ───────────────────────────────────────
             val_loss, val_dice, val_iou = self._validate()
-
-            # ── Scheduler step ─────────────────────────────────
             scheduler.step()
             current_lr = optimizer.param_groups[0]["lr"]
 
@@ -346,14 +245,13 @@ class Trainer:
                 "epoch_time_s": round(epoch_time, 2),
             })
 
-            # ── Checkpoint best model ──────────────────────────
             if val_dice > best_val_dice:
                 best_val_dice = val_dice
                 best_ckpt_path = str(self.ckpt_dir / f"best_{phase_name}")
                 self.model.save(best_ckpt_path)
                 logger.info(f"  ✓ New best val_dice={val_dice:.4f} — saved to {best_ckpt_path}")
 
-            # ── Early stopping check ───────────────────────────
+         
             if early_stop(val_dice):
                 logger.info(f"Early stopping triggered at epoch {epoch}")
                 break
@@ -387,9 +285,7 @@ class Trainer:
             loss = self.loss_fn(logits, masks)
             loss.backward()
 
-            # Gradient clipping: prevents very large updates
-            # (common with small batches where one outlier image
-            #  can produce a huge gradient)
+           
             if self.grad_clip > 0:
                 torch.nn.utils.clip_grad_norm_(
                     self.model.parameters(), self.grad_clip

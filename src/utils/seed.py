@@ -1,16 +1,3 @@
-"""
-src/utils/seed.py
------------------
-Fix all sources of randomness so experiments are reproducible.
-
-Why does this matter?
-- Python's random module: used by data shuffling
-- NumPy: used by Albumentations augmentation
-- PyTorch: used by weight init, dropout, dataloaders
-- CUDA: GPU ops have non-deterministic algorithms by default
-  → torch.backends.cudnn.deterministic=True forces determinism
-  (costs ~5% speed, worth it for research reproducibility)
-"""
 
 import os
 import random
