@@ -1,0 +1,9 @@
+nohup: ignoring input
+2026-04-13 16:03:28 | INFO     | __main__ | Evaluating checkpoint: outputs/checkpoints/best_phase2
+Loading weights:   0%|          | 0/462 [00:00<?, ?it/s]Loading weights: 100%|██████████| 462/462 [00:00<00:00, 10928.40it/s]
+2026-04-13 16:03:29 | INFO     | src.models.clipseg_model | Model loaded from: outputs/checkpoints/best_phase2
+2026-04-13 16:03:29 | INFO     | __main__ | Model size: 575.1 MB
+2026-04-13 16:03:29 | INFO     | src.data.dataset | [taping] Found 2662 valid (image, mask) pairs in data/raw/dataset1
+2026-04-13 16:03:29 | INFO     | src.data.dataset | [crack] Found 15697 valid (image, mask) pairs in data/raw/dataset2
+2026-04-13 16:03:29 | INFO     | src.data.dataset | Split: train=12851, val=2753, test=2755 (total=18359, ratios=0.7/0.15/0.15)
+2026-04-13 16:03:29 | INFO     | __main__ | Evaluating on 2755 test samples

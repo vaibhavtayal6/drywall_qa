@@ -1,0 +1,48 @@
+nohup: ignoring input
+2026-04-13 14:57:08 | INFO     | __main__ | Evaluating checkpoint: outputs/checkpoints/best_phase2
+Loading weights:   0%|          | 0/462 [00:00<?, ?it/s]Loading weights: 100%|██████████| 462/462 [00:00<00:00, 11074.61it/s]
+2026-04-13 14:57:08 | INFO     | src.models.clipseg_model | Model loaded from: outputs/checkpoints/best_phase2
+2026-04-13 14:57:08 | INFO     | __main__ | Model size: 575.1 MB
+2026-04-13 14:57:08 | INFO     | src.data.dataset | [taping] Found 2662 valid (image, mask) pairs in data/raw/dataset1
+2026-04-13 14:57:08 | INFO     | src.data.dataset | [crack] Found 15697 valid (image, mask) pairs in data/raw/dataset2
+2026-04-13 14:57:08 | INFO     | src.data.dataset | Split: train=12851, val=2753, test=2755 (total=18359, ratios=0.7/0.15/0.15)
+2026-04-13 14:57:08 | INFO     | __main__ | Evaluating on 2755 test samples
+2026-04-13 15:06:17 | INFO     | __main__ | 
+============================================================
+2026-04-13 15:06:17 | INFO     | __main__ | EVALUATION RESULTS
+2026-04-13 15:06:17 | INFO     | __main__ | ============================================================
+2026-04-13 15:06:17 | INFO     | __main__ | 
+Class: crack (n=2370)
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_iou: 0.4558
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_dice: 0.6020
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_precision: 0.4745
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_recall: 0.9426
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_boundary_iou: 0.4533
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_cldice: 0.7527
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_inference_ms: 182.8403
+2026-04-13 15:06:17 | INFO     | __main__ | 
+Class: taping (n=385)
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_iou: 0.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_dice: 0.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_precision: 0.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_recall: 0.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_boundary_iou: 1.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_cldice: 1.0000
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_inference_ms: 182.5079
+2026-04-13 15:06:17 | INFO     | __main__ | 
+Overall (n=2755)
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_iou: 0.3921
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_dice: 0.5178
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_precision: 0.4082
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_recall: 0.8108
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_boundary_iou: 0.5297
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_cldice: 0.7873
+2026-04-13 15:06:17 | INFO     | __main__ |   mean_inference_ms: 182.7939
+2026-04-13 15:06:17 | INFO     | __main__ | 
+Metrics saved to: outputs/logs/metrics_test.json
+2026-04-13 15:06:17 | INFO     | src.inference.predict | Benchmarking inference: 2 warmup + 10 timed runs...
+2026-04-13 15:06:19 | INFO     | src.inference.predict | Benchmark result: {'n_runs': 10, 'n_prompts': 6, 'ensemble': True, 'mean_ms': 186.62, 'median_ms': 181.97, 'std_ms': 8.07, 'min_ms': 178.77, 'max_ms': 198.42}
+2026-04-13 15:06:19 | INFO     | __main__ | 
+Benchmark: {'n_runs': 10, 'n_prompts': 6, 'ensemble': True, 'mean_ms': 186.62, 'median_ms': 181.97, 'std_ms': 8.07, 'min_ms': 178.77, 'max_ms': 198.42}
+2026-04-13 15:06:19 | INFO     | __main__ | 
+Evaluation complete.

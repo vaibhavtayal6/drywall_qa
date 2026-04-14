@@ -1,0 +1,60 @@
+{
+  "crack": {
+    "mean_iou": 0.5095,
+    "std_iou": 0.1851,
+    "mean_dice": 0.6537,
+    "std_dice": 0.176,
+    "mean_precision": 0.558,
+    "std_precision": 0.2171,
+    "mean_recall": 0.8873,
+    "std_recall": 0.1227,
+    "mean_boundary_iou": 0.4877,
+    "std_boundary_iou": 0.1456,
+    "mean_cldice": 0.7894,
+    "std_cldice": 0.174,
+    "mean_inference_ms": 217.8611,
+    "std_inference_ms": 28.4139
+  },
+  "taping": {
+    "mean_iou": 0.0,
+    "std_iou": 0.0,
+    "mean_dice": 0.0,
+    "std_dice": 0.0,
+    "mean_precision": 0.0,
+    "std_precision": 0.0,
+    "mean_recall": 0.0,
+    "std_recall": 0.0,
+    "mean_boundary_iou": 1.0,
+    "std_boundary_iou": 0.0,
+    "mean_cldice": 1.0,
+    "std_cldice": 0.0,
+    "mean_inference_ms": 218.2524,
+    "std_inference_ms": 26.8502
+  },
+  "overall": {
+    "mean_iou": 0.4383,
+    "std_iou": 0.2463,
+    "mean_dice": 0.5624,
+    "std_dice": 0.2793,
+    "mean_precision": 0.4801,
+    "std_precision": 0.2793,
+    "mean_recall": 0.7633,
+    "std_recall": 0.328,
+    "mean_boundary_iou": 0.5593,
+    "std_boundary_iou": 0.2231,
+    "mean_cldice": 0.8188,
+    "std_cldice": 0.1771,
+    "mean_inference_ms": 217.9158,
+    "std_inference_ms": 28.2009
+  },
+  "runtime": {
+    "device": "cuda",
+    "mean_inference_ms": 217.92,
+    "ensemble": true,
+    "n_prompts": {
+      "taping": 6,
+      "crack": 6
+    },
+    "model_size_mb": 575.1
+  }
+}
