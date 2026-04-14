@@ -18,11 +18,12 @@ This script:
 """
 
 import argparse
-from collections import Counter
 import yaml
 import torch
 from pathlib import Path
 from torch.utils.data import DataLoader, WeightedRandomSampler
+import cv2
+import numpy as np
 
 from src.utils.seed import set_seed, worker_init_fn
 from src.utils.logger import get_logger
@@ -39,15 +40,69 @@ from src.training.trainer import Trainer, make_collate_fn
 
 
 def make_balanced_sampler(samples):
-    """Oversample minority classes using inverse class-frequency weights."""
-    class_counts = Counter(class_name for _, _, class_name in samples)
-    sample_weights = [1.0 / class_counts[class_name] for _, _, class_name in samples]
+    """Build class-balanced sample weights so crack/taping are seen equally."""
+    crack_count = sum(1 for _, _, class_name in samples if class_name == "crack")
+    taping_count = sum(1 for _, _, class_name in samples if class_name == "taping")
+
+    if crack_count == 0 or taping_count == 0:
+        raise ValueError(
+            f"Both classes must exist in train split (crack={crack_count}, taping={taping_count})"
+        )
+
+    # Boost minority class so expected draw probability per class is balanced.
+    if crack_count >= taping_count:
+        crack_weight = 1.0
+        taping_weight = crack_count / taping_count
+    else:
+        crack_weight = taping_count / crack_count
+        taping_weight = 1.0
+
+    sample_weights = [
+        taping_weight if class_name == "taping" else crack_weight
+        for _, _, class_name in samples
+    ]
     sampler = WeightedRandomSampler(
         weights=sample_weights,
         num_samples=len(samples),
         replacement=True,
     )
-    return sampler, class_counts
+    class_counts = {"crack": crack_count, "taping": taping_count}
+    class_weights = {"crack": crack_weight, "taping": taping_weight}
+    return sampler, class_counts, class_weights
+
+
+def log_annotation_structure(samples, logger, max_samples_per_class=3):
+    """Quick sanity check for annotation files and mask value structure."""
+    logger.info("Annotation structure check (images/ + masks/ + binary mask stats)")
+
+    checked = {"crack": 0, "taping": 0}
+    for image_path, mask_path, class_name in samples:
+        if class_name not in checked or checked[class_name] >= max_samples_per_class:
+            continue
+
+        image_exists = Path(image_path).exists()
+        mask_exists = Path(mask_path).exists()
+        if not (image_exists and mask_exists):
+            logger.warning(
+                f"[{class_name}] missing file(s): image_exists={image_exists}, "
+                f"mask_exists={mask_exists}, image={image_path}, mask={mask_path}"
+            )
+            checked[class_name] += 1
+            continue
+
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        if mask is None:
+            logger.warning(f"[{class_name}] unreadable mask: {mask_path}")
+            checked[class_name] += 1
+            continue
+
+        unique_vals = np.unique(mask)
+        foreground_ratio = float((mask > 0).mean())
+        logger.info(
+            f"[{class_name}] {Path(mask_path).name}: shape={mask.shape}, "
+            f"unique={unique_vals[:10].tolist()}, fg_ratio={foreground_ratio:.5f}"
+        )
+        checked[class_name] += 1
 
 
 def parse_args():
@@ -108,6 +163,9 @@ def main():
         seed=cfg["seed"],
     )
 
+    # Quick annotation sanity check before building datasets/train loop.
+    log_annotation_structure(all_samples, logger)
+
     # Datasets
     train_dataset = DrywallSegDataset(
         samples=train_samples,
@@ -132,9 +190,10 @@ def main():
     collate_fn = make_collate_fn(model.processor, device=device)
     t_cfg = cfg["training"]
 
-    train_sampler, class_counts = make_balanced_sampler(train_samples)
+    train_sampler, class_counts, class_weights = make_balanced_sampler(train_samples)
     logger.info(f"Train class counts: {dict(class_counts)}")
-    logger.info("Using inverse-frequency weighted sampler to oversample taping")
+    logger.info(f"Train sampler class weights: {class_weights}")
+    logger.info("Using class-balanced weighted sampler (shuffle disabled)")
 
     train_loader = DataLoader(
         train_dataset,
